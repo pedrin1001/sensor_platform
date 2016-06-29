@@ -18,3 +18,9 @@
 * 0-50 ˚C (±2˚C)
 
 [src](http://www.micro4you.com/files/sensor/DHT11.pdf)
+
+## TODO:
+
+* check how fast sensors update
+* create logic for bluetooth messages (separate values by comma, ..?)
+
