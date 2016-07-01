@@ -5,6 +5,10 @@
 #define MQ2PIN A2
 #define DHTPIN 8
 #define DHTTYPE DHT11
+
+#define BLURX 0
+#define BLUTX 1
+
 DHT dht(DHTPIN, DHTTYPE);
 
 float hum = 0;
@@ -37,11 +41,7 @@ int readMQ2() {
 }
 
 void serialize(char* fmt) {
-    char str_hum [6]; char str_tmp [6]; char str_hid [6];
-    dtostrf(hum, 4, 2, str_hum);
-    dtostrf(tmp, 4, 2, str_tmp);
-    dtostrf(hid, 4, 2, str_hid);
-    sprintf(fmt, "mq7: %i, mq2: %i, hum: %s, tmp: %s, hid: %s;", mq7, mq2, str_hum, str_tmp, str_hid);
+    sprintf(fmt, "mq7: %i, mq2: %i, hum: %i, tmp: %i, hid: %i;", mq7, mq2, (int)hum, (int)tmp, (int)(hid+0.5));
 }
 
 void callback() {
