@@ -1,6 +1,8 @@
 #include <DHT.h>
 #include <TimerOne.h>
 
+#define MQ7PIN A0
+#define MQ2PIN A2
 #define DHTPIN 8
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
@@ -8,22 +10,40 @@ DHT dht(DHTPIN, DHTTYPE);
 float h = 0;
 float t = 0;
 
-int mq7Pin = A0;
 int mq7Value = 0;
-
-int mq2Pin = A2;
 int mq2Value = 0;
 
+int readMQ7() {
+    int value;
+    value = analogRead(pin);
+    if (isnan(value)) {
+        return NULL;
+    } else {
+        return value;
+    }
+}
+
+int readMQ2() {
+    int value;
+    value = analogRead(pin);
+    if (isnan(value)) {
+        return NULL
+    } else {
+        return value
+    }
+}
+
+/* sensor r/w */
 void callback() {
-    mq7Value = analogRead(mq7Pin);
-    if (isnan(mq7Value)) {
+    mq7Value = readMQ7();
+    if (mq7Value == NULL) {
         Serial.println("Failed to read from MQ7");
     } else {
         Serial.print("MQ7: ");
         Serial.print(mq7Value);
     }
-    mq2Value = analogRead(mq2Pin);
-    if (isnan(mq2Value)) {
+    mq2Value = readMQ2();
+    if (mq2Value == NULL) {
         Serial.println("Failed to read from MQ2");
     } else {
         Serial.print("  MQ2: ");
