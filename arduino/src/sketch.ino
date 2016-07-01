@@ -7,15 +7,18 @@
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
-float h = 0;
-float t = 0;
+float hum = 0;
+float tmp = 0;
+float hid = 0;
 
-int mq7Value = 0;
-int mq2Value = 0;
+int mq7 = 0;
+int mq2 = 0;
+
+char fmt [64];
 
 int readMQ7() {
     int value;
-    value = analogRead(pin);
+    value = analogRead(MQ7PIN);
     if (isnan(value)) {
         return -1;
     } else {
@@ -25,7 +28,7 @@ int readMQ7() {
 
 int readMQ2() {
     int value;
-    value = analogRead(pin);
+    value = analogRead(MQ2PIN);
     if (isnan(value)) {
         return -1;
     } else {
@@ -33,35 +36,21 @@ int readMQ2() {
     }
 }
 
-/* sensor r/w */
-void callback() {
-    mq7Value = readMQ7();
-    if (mq7Value < 0) {
-        Serial.println("Failed to read from MQ7");
-    } else {
-        Serial.print("MQ7: ");
-        Serial.print(mq7Value);
-    }
-    mq2Value = readMQ2();
-    if (mq2Value < 0) {
-        Serial.println("Failed to read from MQ2");
-    } else {
-        Serial.print("  MQ2: ");
-        Serial.print(mq2Value);
-    }
-    Serial.print("  Humi: ");
-    Serial.print(h);
-    Serial.print("  Temp: ");
-    Serial.print(t);
-    Serial.print("  HeatIdx: ");
-    Serial.print(dht.computeHeatIndex(t, h, false));
-    Serial.println();
+void serialize(char* fmt) {
+    char str_hum [6]; char str_tmp [6]; char str_hid [6];
+    dtostrf(hum, 4, 2, str_hum);
+    dtostrf(tmp, 4, 2, str_tmp);
+    dtostrf(hid, 4, 2, str_hid);
+    sprintf(fmt, "mq7: %i, mq2: %i, hum: %s, tmp: %s, hid: %s;", mq7, mq2, str_hum, str_tmp, str_hid);
 }
 
-// mq7: val, mq2: val, hum: val, tmp: val, hid: val;
-// mq7: err, mq2: val, hum: val, tmp: val, hid: val;
-void serialize(char* fmt) {
-    sprintf(fmt, "mq7: %i, mq2: %i, hum: %.2f, tmp: %.2f, hid: %.2f;", mq7Value, mq2Value, h, t, h/t);
+void callback() {
+    mq7 = readMQ7();
+    mq2 = readMQ2();
+    hid = dht.computeHeatIndex(tmp, hum, false);
+
+    serialize(fmt);
+    Serial.println(fmt);
 }
 
 void setup() {
@@ -72,9 +61,9 @@ void setup() {
 }
 
 void loop() {
-    h = dht.readHumidity();
-    t = dht.readTemperature();
-    if (isnan(t) || isnan(h)) {
-        Serial.println("Failed to read from DHT");
+    hum = dht.readHumidity();
+    tmp = dht.readTemperature();
+    if (isnan(tmp) || isnan(hum)) {
+        /* Serial.println("Failed to read from DHT"); */
     }
 }
