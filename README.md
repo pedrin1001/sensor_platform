@@ -20,7 +20,7 @@
 [src](http://www.micro4you.com/files/sensor/DHT11.pdf)
 
 ## TODO:
-
-* check how fast sensors update
-* create logic for bluetooth messages (separate values by comma, ..?)
-
+* sensor arrangement (gas sensor heat & temp sensort)
+* receive and decode bluetooth serial data in the app
+* GPS logging
+* database architecture
