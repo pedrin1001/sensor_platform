@@ -6,9 +6,6 @@
 #define DHTPIN 8
 #define DHTTYPE DHT11
 
-#define BLURX 0
-#define BLUTX 1
-
 DHT dht(DHTPIN, DHTTYPE);
 
 float hum = 0;
@@ -50,7 +47,9 @@ void callback() {
     hid = dht.computeHeatIndex(tmp, hum, false);
 
     serialize(fmt);
-    Serial.println(fmt);
+    if (Serial.available()) {
+        Serial.println(fmt);
+    }
 }
 
 void setup() {
