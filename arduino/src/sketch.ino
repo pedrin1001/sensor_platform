@@ -17,7 +17,7 @@ int readMQ7() {
     int value;
     value = analogRead(pin);
     if (isnan(value)) {
-        return NULL;
+        return -1;
     } else {
         return value;
     }
@@ -27,23 +27,23 @@ int readMQ2() {
     int value;
     value = analogRead(pin);
     if (isnan(value)) {
-        return NULL
+        return -1;
     } else {
-        return value
+        return value;
     }
 }
 
 /* sensor r/w */
 void callback() {
     mq7Value = readMQ7();
-    if (mq7Value == NULL) {
+    if (mq7Value < 0) {
         Serial.println("Failed to read from MQ7");
     } else {
         Serial.print("MQ7: ");
         Serial.print(mq7Value);
     }
     mq2Value = readMQ2();
-    if (mq2Value == NULL) {
+    if (mq2Value < 0) {
         Serial.println("Failed to read from MQ2");
     } else {
         Serial.print("  MQ2: ");
@@ -56,6 +56,12 @@ void callback() {
     Serial.print("  HeatIdx: ");
     Serial.print(dht.computeHeatIndex(t, h, false));
     Serial.println();
+}
+
+// mq7: val, mq2: val, hum: val, tmp: val, hid: val;
+// mq7: err, mq2: val, hum: val, tmp: val, hid: val;
+void serialize(char* fmt) {
+    sprintf(fmt, "mq7: %i, mq2: %i, hum: %.2f, tmp: %.2f, hid: %.2f;", mq7Value, mq2Value, h, t, h/t);
 }
 
 void setup() {
