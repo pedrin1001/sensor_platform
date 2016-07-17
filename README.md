@@ -21,6 +21,3 @@
 
 ## TODO:
 * sensor arrangement (gas sensor heat & temp sensort)
-* receive and decode bluetooth serial data in the app
-* GPS logging
-* database architecture
