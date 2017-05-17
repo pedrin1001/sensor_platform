@@ -1,3 +1,0 @@
-[submodule "arduino/lib/idDHT11"]
-	path = arduino/lib/idDHT11
-	url = https://github.com/niesteszeck/idDHT11
