@@ -1,14 +1,17 @@
 #include "Arduino.h"
 #include <DHT.h>
 #include <TimerOne.h>
+#include "lib/SDCard.h"
 
 #define MQ7PIN A0
 #define MQ2PIN A1
 #define MQ135PIN A2
-#define DHTPIN 8
+#define DHTPIN 7
 #define DHTTYPE DHT11
+#define SD_PIN 8
 
 DHT dht(DHTPIN, DHTTYPE);
+SDCard sd(SD_PIN);
 
 float hum = 0;
 float tmp = 0;
