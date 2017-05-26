@@ -22,22 +22,32 @@ int SDCard::begin() {
     return 1;
 }
 
-void SDCard::writeToFile(char const* fileName, char const* data) {
+int SDCard::writeToFile(char const* fileName, char const* data) {
     // create or append if file already exists
     File file = SD.open(fileName, FILE_WRITE);
     if (file) {
         file.println(data);
         file.close();
+        return 1;
+    } else {
+        return 0;
     }
 }
 
-void SDCard::readFromFile(char const* fileName) {
+int SDCard::readFromFile(char const* fileName) {
     // if the file is available, read from it
     if (fileName) {
         File file = SD.open(fileName, FILE_READ);
-        while (file && file.available()) {
-            Serial.write(file.read());
+        if (file) {
+            while (file.available()) {
+                Serial.write(file.read());
+            }
+            file.close();
+            return 1;
+        } else {
+            return 0;
         }
-        file.close();
+    } else {
+        return 0;
     }
 }

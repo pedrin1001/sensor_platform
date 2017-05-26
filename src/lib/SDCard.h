@@ -7,8 +7,8 @@ class SDCard {
     public:
         SDCard(int pin);
         int begin();
-        void writeToFile(char const*, char const*);
-        void readFromFile(char const*);
+        int writeToFile(char const*, char const*);
+        int readFromFile(char const*);
     private:
         int _cs;
 };
