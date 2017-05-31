@@ -19,8 +19,8 @@ SDCard sd(SD_PIN);
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 TinyGPSPlus gps;
 
-float lat = 0.00;
-float lng = 0.00;
+double lat = 0.00;
+double lng = 0.00;
 
 float hum = 0;
 float tmp = 0;
