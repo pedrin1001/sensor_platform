@@ -10,6 +10,7 @@
  */
 
 #include "SDCard.h"
+#include <MemoryFree.h>
 
 SDCard::SDCard(int chipSelect) {
     _cs = chipSelect;
@@ -22,10 +23,18 @@ int SDCard::begin() {
     return 1;
 }
 
-int SDCard::writeToFile(char const* fileName, char const* data) {
+int SDCard::writeToFile(char* fileName, char const* data, bool ow /*= false*/) {
+    if (ow == true) {
+        Serial.println("ow");
+        SD.remove(fileName);
+    }
     // create or append if file already exists
     File file = SD.open(fileName, FILE_WRITE);
     if (file) {
+        Serial.print("writing ");
+        Serial.print(data);
+        Serial.print(" to ");
+        Serial.println(fileName);
         file.println(data);
         file.close();
         return 1;
