@@ -31,10 +31,6 @@ int SDCard::writeToFile(char* fileName, char const* data, bool ow /*= false*/) {
     // create or append if file already exists
     File file = SD.open(fileName, FILE_WRITE);
     if (file) {
-        Serial.print("writing ");
-        Serial.print(data);
-        Serial.print(" to ");
-        Serial.println(fileName);
         file.println(data);
         file.close();
         return 1;

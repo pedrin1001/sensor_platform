@@ -14,22 +14,12 @@ SoftwareSerial gpsSerial(9, 10);
 
 #define CSV_COLUMNS "mq7,mq2,mq135,tmp,lat,lng,alt"
 
-
 SDCard sd(SD_PIN);
 // Barometer baro;
 TinyGPSPlus gps;
 
-double lat = 0.00;
-double lng = 0.00;
 double alt = 0.00;
-uint32_t date = 0;
-uint32_t time = 0;
-
 float tmp = 0;
-
-int mq7 = 0;
-int mq2 = 0;
-int mq135 = 0;
 
 bool firstEntry = true;
 char fileName [32];
@@ -43,11 +33,12 @@ int readMQ(int pin) {
     }
 }
 
-void serialize(char* fmt) {
+void serialize(char* entry) {
     sprintf(
-        fmt,
+        entry,
         "%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
-        mq7, mq2, mq135, (int)tmp, lat, lng, alt
+        readMQ(MQ7PIN), readMQ(MQ2PIN), readMQ(MQ135PIN), (int)tmp,
+        gps.location.lat(), gps.location.lng(), alt
     );
 }
 
@@ -65,43 +56,52 @@ void callback() {
 }
 
 void createFileName(char *str) {
-    sprintf(str, "log_%lu_%lu.csv", date, time);
+        sprintf(str, "%d-%dh.csv", gps.date.day(), gps.time.hour());
 }
 
-uint16_t rgbToVoltage(uint8_t value) {
+uint16_t rgbToVoltage(const uint8_t &value) {
     return map(value, 0, 255, 0, 1023);
 }
 
-#ifdef DEBUG
+void setLEDColor(const uint8_t &r, const uint8_t &g, const uint8_t &b) {
+    analogWrite(LED_RED, rgbToVoltage(r));
+    analogWrite(LED_GREEN, rgbToVoltage(g));
+    analogWrite(LED_BLUE, rgbToVoltage(b));
+}
+
 void error(char const* msg) {
-    analogWrite(LED_RED, rgbToVoltage(242));
-    analogWrite(LED_GREEN, rgbToVoltage(14));
-    analogWrite(LED_BLUE, rgbToVoltage(48));
+    setLEDColor(242, 14, 48);
+    #ifdef DEBUG
     Serial.println(msg);
+    #endif
     // watchdog will reset arduino
     while(1);
 }
-#else
-void error() {
-    analogWrite(LED_RED, rgbToVoltage(242));
-    analogWrite(LED_GREEN, rgbToVoltage(14));
-    analogWrite(LED_BLUE, rgbToVoltage(48));
-    // watchdog will reset arduino
-    while(1);
-}
-#endif
 
 // ISR(WDT_vect) {
 // }
+
+// delay while keep reading gps data
+void smartDelay(const uint8_t &delay) {
+    unsigned long initialTime = millis();
+    unsigned long currentTime;
+    do {
+        if (gpsSerial.available() > 0) {
+            gps.encode(gpsSerial.read());
+        }
+        currentTime = millis();
+    } while (currentTime - initialTime < delay);
+}
 
 void setup() {
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
 
-    analogWrite(LED_RED, rgbToVoltage(242));
-    analogWrite(LED_GREEN, rgbToVoltage(14));
-    analogWrite(LED_BLUE, rgbToVoltage(48));
+    setLEDColor(242, 14, 48);
+
+    // enable watchdog with 2 seconds timer
+    wdt_enable(WDTO_2S);
 
     Serial.begin(9600);
     #ifdef DEBUG
@@ -110,8 +110,7 @@ void setup() {
     // Timer1.initialize(500000);
     // Timer1.attachInterrupt(callback);
     if(!sd.begin()) {
-        Serial.println("sd could not begin!");
-        while(1);
+        error("sd could not begin!");
     }
     // if(!baro.begin()) {
     //     Serial.println("baro could not begin!");
@@ -120,102 +119,47 @@ void setup() {
 
     // setup went ok, blue color means good to go
     // red light is more intense than the others, so the voltage is cut down by three
-    analogWrite(LED_RED, rgbToVoltage(39)/3);
-    analogWrite(LED_GREEN, rgbToVoltage(18));
-    analogWrite(LED_BLUE, rgbToVoltage(229));
-    // Serial.print("freeMemory(): ");
-    // Serial.println(freeMemory());
-    // if(!(sd.readFromFile("log_50617_15534200.csv"))) {
-    //     Serial.println("could not read file");
-    // }
-    // enable watchdog with 2 seconds timer
-    wdt_enable(WDTO_2S);
+    setLEDColor(13, 18, 229);
 }
 
 void loop() {
-    // Serial.println(freeMemory());
-    // send data only when you receive data:
     #ifdef DEBUG
     if (gpsSerial.available() > 0) {
         gps.encode(gpsSerial.read());
-        // Serial.println(freeMemory());
+    #else
+    if (Serial.available() > 0) {
+        gps.encode(Serial.read());
+    #endif
         if (firstEntry && gps.date.isValid() && gps.location.isValid()) {
-            date = gps.date.value();
-            time = gps.time.value();
             createFileName(fileName);
             if (sd.writeToFile(fileName, CSV_COLUMNS)) {
+                #ifdef DEBUG
                 Serial.print("new log file ");
                 Serial.println(fileName);
+                #endif
                 firstEntry = false;
             } else {
                 error("could not save new log file");
             }
         }
-        if (gps.date.isValid() && gps.date.isUpdated()) {
-            date = gps.date.value();
-            time = gps.time.value();
-        }
-        if (gps.location.isValid() && gps.location.isUpdated()) {
-            lat = gps.location.lat();
-            lng = gps.location.lng();
+        if (!firstEntry && gps.location.isValid() && gps.location.isUpdated()) {
             // baro.getAltitude(alt);
             char entry [64];
             serialize(entry);
-            // Serial.println(entry);
+            #ifdef DEBUG
+            Serial.println(entry);
+            #endif
             if (sd.writeToFile(fileName, entry)) {
-                analogWrite(LED_RED, rgbToVoltage(39)/3);
-                analogWrite(LED_GREEN, rgbToVoltage(18));
-                analogWrite(LED_BLUE, rgbToVoltage(229));
+                setLEDColor(13, 18, 229);
             } else {
                 error("could not write data to file");
             }
         } else {
-            analogWrite(LED_RED, rgbToVoltage(242));
-            analogWrite(LED_GREEN, rgbToVoltage(14));
-            analogWrite(LED_BLUE, rgbToVoltage(48));
+            setLEDColor(242, 14, 48);
         }
     }
 
-    // Serial.print("freeMemory(): ");
-    // Serial.println(freeMemory());
-    #else
-    if (Serial.available() > 0) {
-        gps.encode(Serial.read());
-        if (firstEntry && gps.date.isValid()) {
-            date = gps.date.value();
-            time = gps.time.value();
-            createFileName(fileName);
-            if (sd.writeToFile(fileName, CSV_COLUMNS)) {
-                firstEntry = false;
-            } else {
-                error();
-            }
-        }
-        if (gps.date.isValid() && gps.date.isUpdated()) {
-            date = gps.date.value();
-            time = gps.time.value();
-        }
-        if (gps.location.isValid() && gps.location.isUpdated()) {
-            lat = gps.location.lat();
-            lng = gps.location.lng();
-            // baro.getAltitude(alt);
-            char entry [64];
-            serialize(entry);
-            if (sd.writeToFile(fileName, entry)) {
-                analogWrite(LED_RED, rgbToVoltage(39)/3);
-                analogWrite(LED_GREEN, rgbToVoltage(18));
-                analogWrite(LED_BLUE, rgbToVoltage(229));
-            } else {
-                error();
-            }
-        } else {
-            analogWrite(LED_RED, rgbToVoltage(242));
-            analogWrite(LED_GREEN, rgbToVoltage(14));
-            analogWrite(LED_BLUE, rgbToVoltage(48));
-        }
-    }
-
-    #endif
+    smartDelay(255);
     // reset watchdog timer
     wdt_reset();
 }
