@@ -9,6 +9,7 @@ class SDCard {
         int begin();
         int writeToFile(char* fileName, char const* data, bool ow = false);
         int readFromFile(char const*);
+        bool exists(char*);
     private:
         int _cs;
 };

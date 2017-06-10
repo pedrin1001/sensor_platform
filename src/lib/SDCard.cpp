@@ -10,7 +10,6 @@
  */
 
 #include "SDCard.h"
-#include <MemoryFree.h>
 
 SDCard::SDCard(int chipSelect) {
     _cs = chipSelect;
@@ -21,6 +20,10 @@ int SDCard::begin() {
         return 0;
     }
     return 1;
+}
+
+bool SDCard::exists(char* fileName) {
+    return SD.exists(fileName);
 }
 
 int SDCard::writeToFile(char* fileName, char const* data, bool ow /*= false*/) {

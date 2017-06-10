@@ -4,7 +4,7 @@
 #define MQ7PIN A0
 #define MQ2PIN A1
 #define MQ135PIN A2
-#define DHTPIN 7
+#define DHTPIN 2
 #define DHTTYPE DHT11
 #define SD_PIN 8
 #define LED_RED 6

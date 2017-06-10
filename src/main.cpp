@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include <avr/wdt.h>
 #include <TimerOne.h>
+#include <TinyGPS++.h>
+#include <idDHT11.h>
 #include "lib/SDCard.h"
 #include "PinMap.h"
-// #include "lib/Barometer.h"
-#include <TinyGPS++.h>
 
 #ifdef DEBUG
 #include <MemoryFree.h>
@@ -12,51 +12,18 @@
 SoftwareSerial gpsSerial(9, 10);
 #endif
 
-#define CSV_COLUMNS "mq7,mq2,mq135,tmp,lat,lng,alt"
+#define CSV_COLUMNS "mq7,mq2,mq135,tmp,hum,lat,lng,alt"
 
 SDCard sd(SD_PIN);
-// Barometer baro;
 TinyGPSPlus gps;
 
-double alt = 0.00;
-float tmp = 0;
-
 bool firstEntry = true;
-char fileName [32];
+char fileName [11];
 
-int readMQ(int pin) {
-    int value = analogRead(pin);
-    if (isnan(value)) {
-        return -1;
-    } else {
-        return value;
-    }
-}
-
-void serialize(char* entry) {
-    sprintf(
-        entry,
-        "%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
-        readMQ(MQ7PIN), readMQ(MQ2PIN), readMQ(MQ135PIN), (int)tmp,
-        gps.location.lat(), gps.location.lng(), alt
-    );
-}
-
-void callback() {
-    // mq7 = readMQ(MQ7PIN);
-    // mq2 = readMQ(MQ2PIN);
-    // mq135 = readMQ(MQ135PIN);
-    // hid = dht.computeHeatIndex(tmp, hum, false);
-    //
-    // char fmt [64];
-    // serialize(fmt);
-    // if (Serial.available()) {
-    //     Serial.println(fmt);
-    // }
-}
-
-void createFileName(char *str) {
-        sprintf(str, "%d-%dh.csv", gps.date.day(), gps.time.hour());
+void dht11_wrapper();
+idDHT11 dht(DHTPIN, 0, dht11_wrapper);
+void dht11_wrapper() {
+    dht.isrCallback();
 }
 
 uint16_t rgbToVoltage(const uint8_t &value) {
@@ -78,19 +45,54 @@ void error(char const* msg) {
     while(1);
 }
 
-// ISR(WDT_vect) {
-// }
+int readMQ(int pin) {
+    int value = analogRead(pin);
+    if (isnan(value)) {
+        return -1;
+    } else {
+        return value;
+    }
+}
+
+void serialize(char* entry) {
+    while(dht.acquiring());
+    int result = dht.getStatus();
+    if (result != IDDHTLIB_OK) {
+        // try "synchronous" way
+        if (dht.acquireAndWait() != IDDHTLIB_OK) {
+            error("dht could did not acquire proper data");
+        }
+    }
+    sprintf(
+        entry,
+        "%i,%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
+        readMQ(MQ7PIN), readMQ(MQ2PIN), readMQ(MQ135PIN), (int)dht.getCelsius(), (int)dht.getHumidity(),
+        gps.location.lat(), gps.location.lng(), gps.altitude.meters()
+    );
+}
+
+void createFileName(char *str) {
+    sprintf(str, "%d-%dh.csv", gps.date.day(), gps.time.hour());
+}
 
 // delay while keep reading gps data
 void smartDelay(const uint8_t &delay) {
     unsigned long initialTime = millis();
     unsigned long currentTime;
     do {
+        #ifdef DEBUG
         if (gpsSerial.available() > 0) {
             gps.encode(gpsSerial.read());
+        #else
+        if (Serial.available() > 0) {
+            gps.encode(Serial.read());
+        #endif
         }
         currentTime = millis();
     } while (currentTime - initialTime < delay);
+}
+
+void callback() {
 }
 
 void setup() {
@@ -107,44 +109,42 @@ void setup() {
     #ifdef DEBUG
     gpsSerial.begin(9600);
     #endif
-    // Timer1.initialize(500000);
-    // Timer1.attachInterrupt(callback);
     if(!sd.begin()) {
         error("sd could not begin!");
     }
-    // if(!baro.begin()) {
-    //     Serial.println("baro could not begin!");
-    //     while(1);
-    // }
-
-    // setup went ok, blue color means good to go
-    // red light is more intense than the others, so the voltage is cut down by three
-    setLEDColor(13, 18, 229);
+    // start acquiring, evaluation is interrupt driven
+    dht.acquire();
+    // setup went ok, yellow color means waiting for valid gps data
+    setLEDColor(200, 252, 2);
 }
 
 void loop() {
-    #ifdef DEBUG
-    if (gpsSerial.available() > 0) {
-        gps.encode(gpsSerial.read());
-    #else
-    if (Serial.available() > 0) {
-        gps.encode(Serial.read());
-    #endif
-        if (firstEntry && gps.date.isValid() && gps.location.isValid()) {
-            createFileName(fileName);
+    smartDelay(255);
+    if (firstEntry && gps.date.isValid() && gps.location.isValid()) {
+        createFileName(fileName);
+        if (sd.exists(fileName)) {
+            #ifdef DEBUG
+            Serial.print(F("appending to file "));
+            Serial.println(fileName);
+            #endif
+            firstEntry = false;
+            setLEDColor(13, 18, 229);
+        } else {
             if (sd.writeToFile(fileName, CSV_COLUMNS)) {
                 #ifdef DEBUG
-                Serial.print("new log file ");
+                Serial.print(F("new log file "));
                 Serial.println(fileName);
                 #endif
                 firstEntry = false;
+                setLEDColor(13, 18, 229);
             } else {
                 error("could not save new log file");
             }
         }
-        if (!firstEntry && gps.location.isValid() && gps.location.isUpdated()) {
-            // baro.getAltitude(alt);
-            char entry [64];
+    }
+    if (!firstEntry && gps.location.isValid()) {
+        if (gps.location.isUpdated()) {
+            char entry [40];
             serialize(entry);
             #ifdef DEBUG
             Serial.println(entry);
@@ -154,12 +154,11 @@ void loop() {
             } else {
                 error("could not write data to file");
             }
-        } else {
-            setLEDColor(242, 14, 48);
         }
+    } else {
+        // yellow for invalid gps data
+        setLEDColor(200, 252, 2);
     }
-
-    smartDelay(255);
     // reset watchdog timer
     wdt_reset();
 }
