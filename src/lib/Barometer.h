@@ -9,7 +9,7 @@ class Barometer {
         int begin();
         int getAltitude(double &alt);
     private:
-        double _getPressure(double &P);
+        double _getPressure();
         SFE_BMP180 _pressure;
         double _baseline;
 };

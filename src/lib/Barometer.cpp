@@ -1,4 +1,5 @@
 #include "Barometer.h"
+#include <MemoryFree.h>
 
 Barometer::Barometer() {
 }
@@ -8,38 +9,37 @@ int Barometer::begin() {
     if(!(_pressure.begin())) {
         return 0;
     }
-    _getPressure(_baseline);
+    _baseline = _getPressure();
 
+    #ifdef DEBUG
     Serial.print("baseline pressure: ");
     Serial.print(_baseline);
     Serial.println(" mb");
+    #endif
     return 1;
 }
 
 int Barometer::getAltitude(double &alt) {
-    double P;
-
     // Get a new pressure reading:
 
-    _getPressure(P);
+    double P = _getPressure();
+    if (!P) {
+        return 0;
+    }
 
     // Show the relative altitude difference between
     // the new reading and the baseline reading:
 
-    alt = _pressure.altitude(P,_baseline);
+    alt = _pressure.altitude(P, _baseline);
     if (!alt) {
         return 0;
     }
-    Serial.print("relative altitude: ");
-    if (alt >= 0.0) Serial.print(" "); // add a space for positive numbers
-    Serial.print(alt, 1);
-    Serial.println(" meters");
     return 1;
 }
 
-double Barometer::_getPressure(double &P) {
+double Barometer::_getPressure() {
     char status;
-    double T;
+    double T, P;
 
     // You must first get a temperature measurement to perform a pressure reading.
 
@@ -51,7 +51,7 @@ double Barometer::_getPressure(double &P) {
     if (status != 0) {
         // Wait for the measurement to complete:
 
-        delay(status);Serial.println(status);
+        delay(status);//Serial.println(status);
 
         // Retrieve the completed temperature measurement:
         // Note that the measurement is stored in the variable T.
@@ -68,7 +68,7 @@ double Barometer::_getPressure(double &P) {
             status = _pressure.startPressure(3);
             if (status != 0) {
                 // Wait for the measurement to complete:
-                delay(status);Serial.println(status);
+                delay(status);//Serial.println(status);
 
                 // Retrieve the completed pressure measurement:
                 // Note that the measurement is stored in the variable P.
