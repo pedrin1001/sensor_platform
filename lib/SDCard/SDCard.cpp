@@ -28,7 +28,10 @@ bool SDCard::exists(char* fileName) {
 
 int SDCard::writeToFile(char* fileName, char const* data, bool ow /*= false*/) {
     if (ow == true) {
-        Serial.println("ow");
+        #ifdef DEBUG
+        Serial.print(F("overwriting "));
+        Serial.println(fileName);
+        #endif
         SD.remove(fileName);
     }
     // create or append if file already exists
