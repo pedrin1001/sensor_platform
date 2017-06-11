@@ -3,7 +3,7 @@
 #include <TimerOne.h>
 #include <TinyGPS++.h>
 #include <idDHT11.h>
-#include "lib/SDCard.h"
+#include <SDCard.h>
 #include "PinMap.h"
 
 #ifdef DEBUG
@@ -20,6 +20,11 @@ TinyGPSPlus gps;
 bool firstEntry = true;
 char fileName [11];
 
+/**
+ * initialize dht as on library documentation
+ * @see https://github.com/niesteszeck/idDHT11/blob/master/examples/idDHT11_Lib_example/idDHT11_Lib_example.ino
+ * @see https://www.arduino.cc/en/Reference/AttachInterrupt
+ */
 void dht11_wrapper();
 idDHT11 dht(DHTPIN, 0, dht11_wrapper);
 void dht11_wrapper() {
@@ -45,6 +50,9 @@ void error(char const* msg) {
     while(1);
 }
 
+/**
+ * reads voltage at given pin, used for the MQ-* gas sensors
+ */
 int readMQ(int pin) {
     int value = analogRead(pin);
     if (isnan(value)) {
@@ -54,13 +62,16 @@ int readMQ(int pin) {
     }
 }
 
+/**
+ * wrap all data together to be appended to csv log file
+ */
 void serialize(char* entry) {
     while(dht.acquiring());
     int result = dht.getStatus();
     if (result != IDDHTLIB_OK) {
-        // try "synchronous" way
+        // try again using "synchronous" way
         if (dht.acquireAndWait() != IDDHTLIB_OK) {
-            error("dht could did not acquire proper data");
+            error("dht could not acquire proper data");
         }
     }
     sprintf(
@@ -72,7 +83,9 @@ void serialize(char* entry) {
 }
 
 void createFileName(char *str) {
-    sprintf(str, "%d-%dh.csv", gps.date.day(), gps.time.hour());
+    // limited to 8.3 file format https://en.wikipedia.org/wiki/8.3_filename
+    // so .csv was removed
+    sprintf(str, "%d-%d-%d", gps.date.day(), gps.time.hour(), gps.time.minute());
 }
 
 // delay while keep reading gps data
@@ -92,9 +105,6 @@ void smartDelay(const uint8_t &delay) {
     } while (currentTime - initialTime < delay);
 }
 
-void callback() {
-}
-
 void setup() {
     pinMode(LED_BLUE, OUTPUT);
     pinMode(LED_GREEN, OUTPUT);
@@ -112,9 +122,9 @@ void setup() {
     if(!sd.begin()) {
         error("sd could not begin!");
     }
-    // start acquiring, evaluation is interrupt driven
+    // start acquiring first value, result is interrupt driven
     dht.acquire();
-    // setup went ok, yellow color means waiting for valid gps data
+    // setup went ok, green color means waiting for valid gps data
     setLEDColor(200, 252, 2);
 }
 
@@ -144,6 +154,8 @@ void loop() {
     }
     if (!firstEntry && gps.location.isValid()) {
         if (gps.location.isUpdated()) {
+            // get new dht value
+            dht.acquire();
             char entry [40];
             serialize(entry);
             #ifdef DEBUG
@@ -156,7 +168,7 @@ void loop() {
             }
         }
     } else {
-        // yellow for invalid gps data
+        // green for invalid gps data
         setLEDColor(200, 252, 2);
     }
     // reset watchdog timer
