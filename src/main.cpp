@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <avr/wdt.h>
-#include <TimerOne.h>
 #include <TinyGPS++.h>
 #include <idDHT11.h>
 #include <SDCard.h>
