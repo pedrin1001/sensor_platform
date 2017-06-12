@@ -3,6 +3,7 @@
 #include <TinyGPS++.h>
 #include <idDHT11.h>
 #include <SDCard.h>
+#include "Utils.h"
 #include "PinMap.h"
 
 #ifdef DEBUG
@@ -28,37 +29,6 @@ void dht11_wrapper();
 idDHT11 dht(DHTPIN, 0, dht11_wrapper);
 void dht11_wrapper() {
     dht.isrCallback();
-}
-
-uint16_t rgbToVoltage(const uint8_t &value) {
-    return map(value, 0, 255, 0, 1023);
-}
-
-void setLEDColor(const uint8_t &r, const uint8_t &g, const uint8_t &b) {
-    analogWrite(LED_RED, rgbToVoltage(r));
-    analogWrite(LED_GREEN, rgbToVoltage(g));
-    analogWrite(LED_BLUE, rgbToVoltage(b));
-}
-
-void error(char const* msg) {
-    setLEDColor(242, 14, 48);
-    #ifdef DEBUG
-    Serial.println(msg);
-    #endif
-    // watchdog will reset arduino
-    while(1);
-}
-
-/**
- * reads voltage at given pin, used for the MQ-* gas sensors
- */
-int readMQ(int pin) {
-    int value = analogRead(pin);
-    if (isnan(value)) {
-        return -1;
-    } else {
-        return value;
-    }
 }
 
 /**
@@ -87,8 +57,10 @@ void createFileName(char *str) {
     sprintf(str, "%d-%d-%d", gps.date.day(), gps.time.hour(), gps.time.minute());
 }
 
-// delay while keep reading gps data
-void smartDelay(const uint8_t &delay) {
+/**
+ * delay while keep reading gps data
+ */
+void smartDelay(const unsigned long &delay) {
     unsigned long initialTime = millis();
     unsigned long currentTime;
     do {
