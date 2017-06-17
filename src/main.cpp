@@ -3,8 +3,8 @@
 #include <TinyGPS++.h>
 #include <idDHT11.h>
 #include <SDCard.h>
-#include "Utils.h"
-#include "PinMap.h"
+#include <Utils.h>
+#include <PinMap.h>
 
 #ifdef DEBUG
 #include <MemoryFree.h>
@@ -16,6 +16,7 @@ SoftwareSerial gpsSerial(9, 10);
 
 SDCard sd(SD_PIN);
 TinyGPSPlus gps;
+Utils utils;
 
 bool firstEntry = true;
 char fileName [11];
@@ -40,13 +41,13 @@ void serialize(char* entry) {
     if (result != IDDHTLIB_OK) {
         // try again using "synchronous" way
         if (dht.acquireAndWait() != IDDHTLIB_OK) {
-            error("dht could not acquire proper data");
+            utils.error("dht could not acquire proper data");
         }
     }
     sprintf(
         entry,
         "%i,%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
-        readMQ(MQ7PIN), readMQ(MQ2PIN), readMQ(MQ135PIN), (int)dht.getCelsius(), (int)dht.getHumidity(),
+        utils.readMQ(MQ7PIN), utils.readMQ(MQ2PIN), utils.readMQ(MQ135PIN), (int)dht.getCelsius(), (int)dht.getHumidity(),
         gps.location.lat(), gps.location.lng(), gps.altitude.meters()
     );
 }
@@ -81,7 +82,7 @@ void setup() {
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
 
-    setLEDColor(242, 14, 48);
+    utils.setLEDColor(242, 14, 48);
 
     // enable watchdog with 2 seconds timer
     wdt_enable(WDTO_2S);
@@ -91,12 +92,12 @@ void setup() {
     gpsSerial.begin(9600);
     #endif
     if(!sd.begin()) {
-        error("sd could not begin!");
+        utils.error("sd could not begin!");
     }
     // start acquiring first value, result is interrupt driven
     dht.acquire();
     // setup went ok, green color means waiting for valid gps data
-    setLEDColor(200, 252, 2);
+    utils.setLEDColor(200, 252, 2);
 }
 
 void loop() {
@@ -109,7 +110,7 @@ void loop() {
             Serial.println(fileName);
             #endif
             firstEntry = false;
-            setLEDColor(13, 18, 229);
+            utils.setLEDColor(13, 18, 229);
         } else {
             if (sd.writeToFile(fileName, CSV_COLUMNS)) {
                 #ifdef DEBUG
@@ -117,9 +118,9 @@ void loop() {
                 Serial.println(fileName);
                 #endif
                 firstEntry = false;
-                setLEDColor(13, 18, 229);
+                utils.setLEDColor(13, 18, 229);
             } else {
-                error("could not save new log file");
+                utils.error("could not save new log file");
             }
         }
     }
@@ -133,14 +134,14 @@ void loop() {
             Serial.println(entry);
             #endif
             if (sd.writeToFile(fileName, entry)) {
-                setLEDColor(13, 18, 229);
+                utils.setLEDColor(13, 18, 229);
             } else {
-                error("could not write data to file");
+                utils.error("could not write data to file");
             }
         }
     } else {
         // green for invalid gps data
-        setLEDColor(200, 252, 2);
+        utils.setLEDColor(200, 252, 2);
     }
     // reset watchdog timer
     wdt_reset();
