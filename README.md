@@ -1,7 +1,7 @@
 arduino air quality station
 =================================
 
-[![Build Status](https://travis-ci.org/pedroscaff/sensor_platform.svg?branch=master)](https://travis-ci.org/pedroscaff/sensor_platform)
+[![Build Status](https://travis-ci.org/pedroscaff/sensor-platform.svg?branch=master)](https://travis-ci.org/pedroscaff/sensor-platform)
 
 ### library references
 
