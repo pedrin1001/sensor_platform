@@ -1,14 +1,11 @@
 #ifndef PinMap_h
 #define PinMap_h
 
-#define MQ7PIN A0
-#define MQ2PIN A1
-#define MQ135PIN A2
-#define DHTPIN 2
-#define DHTTYPE DHT11
-#define SD_PIN 8
-#define LED_RED 6
-#define LED_GREEN 5
-#define LED_BLUE 3
+#define MQ2_PIN A5
+#define MQ135_PIN A1
+#define DHT_PIN 3
+#define DHT_TYPE DHT11
+#define SD_PIN 10
+#define LED_PIN 6
 
 #endif

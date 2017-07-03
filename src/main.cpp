@@ -9,10 +9,8 @@
 #ifdef DEBUG
 #include <MemoryFree.h>
 #include <SoftwareSerial.h>
-SoftwareSerial gpsSerial(9, 10);
+SoftwareSerial gpsSerial(8, 9);
 #endif
-
-#define CSV_COLUMNS "mq7,mq2,mq135,tmp,hum,lat,lng,alt"
 
 SDCard sd(SD_PIN);
 TinyGPSPlus gps;
@@ -20,6 +18,7 @@ Utils utils;
 
 bool firstEntry = true;
 char fileName [11];
+int ledState = LOW;
 
 /**
  * initialize dht as on library documentation
@@ -27,7 +26,7 @@ char fileName [11];
  * @see https://www.arduino.cc/en/Reference/AttachInterrupt
  */
 void dht11_wrapper();
-idDHT11 dht(DHTPIN, 0, dht11_wrapper);
+idDHT11 dht(DHT_PIN, 1, dht11_wrapper);
 void dht11_wrapper() {
     dht.isrCallback();
 }
@@ -39,15 +38,18 @@ void serialize(char* entry) {
     while(dht.acquiring());
     int result = dht.getStatus();
     if (result != IDDHTLIB_OK) {
-        // try again using "synchronous" way
-        if (dht.acquireAndWait() != IDDHTLIB_OK) {
-            utils.error("dht could not acquire proper data");
-        }
+        #ifdef DEBUG
+        dht.printError(result);
+        #endif
+    } else {
+        // save new values
+        dht.saveLastValidData();
     }
     sprintf(
         entry,
-        "%i,%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
-        utils.readMQ(MQ7PIN), utils.readMQ(MQ2PIN), utils.readMQ(MQ135PIN), (int)dht.getCelsius(), (int)dht.getHumidity(),
+        "%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
+        utils.readMQ(MQ2_PIN), utils.readMQ(MQ135_PIN),
+        (int)dht.getLastValidCelsius(), (int)dht.getLastValidHumidity(),
         gps.location.lat(), gps.location.lng(), gps.altitude.meters()
     );
 }
@@ -78,31 +80,44 @@ void smartDelay(const unsigned long &delay) {
 }
 
 void setup() {
-    pinMode(LED_BLUE, OUTPUT);
-    pinMode(LED_GREEN, OUTPUT);
-    pinMode(LED_RED, OUTPUT);
 
-    utils.setLEDColor(242, 14, 48);
+    Serial.begin(9600);
+    #ifdef DEBUG
+    Serial.println(F("setup: initializing sensor platform..."));
+    gpsSerial.begin(9600);
+    #endif
+
+    // setup control led
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
 
     // enable watchdog with 2 seconds timer
     wdt_enable(WDTO_2S);
 
-    Serial.begin(9600);
-    #ifdef DEBUG
-    gpsSerial.begin(9600);
-    #endif
     if(!sd.begin()) {
-        utils.error("sd could not begin!");
+        utils.error("setup: sd could not begin!");
     }
+
     // start acquiring first value, result is interrupt driven
-    dht.acquire();
-    // setup went ok, green color means waiting for valid gps data
-    utils.setLEDColor(200, 252, 2);
+    // the dht sensor is having issues since the soldering on the board,
+    // this is a tmeporary work around to get valid values
+    if (dht.acquireAndWait() != IDDHTLIB_OK) {
+        utils.error("setup: dht could not acquire proper data!");
+    } else {
+        dht.saveLastValidData();
+    }
+
+    #ifdef DEBUG
+    Serial.println(F("setup: initialization went okay!"));
+    #endif
+
 }
 
 void loop() {
     smartDelay(255);
     if (firstEntry && gps.date.isValid() && gps.location.isValid()) {
+        // if valid state is entered, led is on
+        digitalWrite(LED_PIN, HIGH);
         createFileName(fileName);
         if (sd.exists(fileName)) {
             #ifdef DEBUG
@@ -110,21 +125,17 @@ void loop() {
             Serial.println(fileName);
             #endif
             firstEntry = false;
-            utils.setLEDColor(13, 18, 229);
         } else {
-            if (sd.writeToFile(fileName, CSV_COLUMNS)) {
-                #ifdef DEBUG
-                Serial.print(F("new log file "));
-                Serial.println(fileName);
-                #endif
-                firstEntry = false;
-                utils.setLEDColor(13, 18, 229);
-            } else {
-                utils.error("could not save new log file");
-            }
+            #ifdef DEBUG
+            Serial.print(F("new log file "));
+            Serial.println(fileName);
+            #endif
+            firstEntry = false;
         }
     }
     if (!firstEntry && gps.location.isValid()) {
+        // if valid state is entered, led is on
+        digitalWrite(LED_PIN, HIGH);
         if (gps.location.isUpdated()) {
             // get new dht value
             dht.acquire();
@@ -133,15 +144,18 @@ void loop() {
             #ifdef DEBUG
             Serial.println(entry);
             #endif
-            if (sd.writeToFile(fileName, entry)) {
-                utils.setLEDColor(13, 18, 229);
-            } else {
+            if (!sd.writeToFile(fileName, entry)) {
                 utils.error("could not write data to file");
             }
         }
     } else {
-        // green for invalid gps data
-        utils.setLEDColor(200, 252, 2);
+        // blink for invalid gps data
+        if (ledState == LOW) {
+            ledState = HIGH;
+        } else {
+            ledState = LOW;
+        }
+        digitalWrite(LED_PIN, ledState);
     }
     // reset watchdog timer
     wdt_reset();
