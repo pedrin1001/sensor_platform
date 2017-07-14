@@ -47,7 +47,7 @@ void serialize(char* entry) {
     }
     sprintf(
         entry,
-        "%i,%i,%i,%i,%0.2f,%0.2f,%0.2f",
+        "%i,%i,%i,%i,%0.6f,%0.6f,%0.2f",
         utils.readMQ(MQ2_PIN), utils.readMQ(MQ135_PIN),
         (int)dht.getLastValidCelsius(), (int)dht.getLastValidHumidity(),
         gps.location.lat(), gps.location.lng(), gps.altitude.meters()
