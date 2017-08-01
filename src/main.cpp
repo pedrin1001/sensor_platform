@@ -47,10 +47,11 @@ void serialize(char* entry) {
     }
     sprintf(
         entry,
-        "%i,%i,%i,%i,%0.6f,%0.6f,%0.2f",
+        "%i,%i,%i,%i,%0.6f,%0.6f,%0.2f,%lu",
         utils.readMQ(MQ2_PIN), utils.readMQ(MQ135_PIN),
         (int)dht.getLastValidCelsius(), (int)dht.getLastValidHumidity(),
-        gps.location.lat(), gps.location.lng(), gps.altitude.meters()
+        gps.location.lat(), gps.location.lng(), gps.altitude.meters(),
+        gps.time.value()
     );
 }
 
@@ -136,17 +137,15 @@ void loop() {
     if (!firstEntry && gps.location.isValid()) {
         // if valid state is entered, led is on
         digitalWrite(LED_PIN, HIGH);
-        if (gps.location.isUpdated()) {
-            // get new dht value
-            dht.acquire();
-            char entry [40];
-            serialize(entry);
-            #ifdef DEBUG
-            Serial.println(entry);
-            #endif
-            if (!sd.writeToFile(fileName, entry)) {
-                utils.error("could not write data to file");
-            }
+        // get new dht value
+        dht.acquire();
+        char entry [40];
+        serialize(entry);
+        #ifdef DEBUG
+        Serial.println(entry);
+        #endif
+        if (!sd.writeToFile(fileName, entry)) {
+            utils.error("could not write data to file");
         }
     } else {
         // blink for invalid gps data
