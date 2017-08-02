@@ -139,7 +139,7 @@ void loop() {
         digitalWrite(LED_PIN, HIGH);
         // get new dht value
         dht.acquire();
-        char entry [40];
+        char entry [50];
         serialize(entry);
         #ifdef DEBUG
         Serial.println(entry);
