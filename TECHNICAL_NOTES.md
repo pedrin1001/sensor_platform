@@ -1,13 +1,16 @@
 technical notes and research
 =============================
 
-
-### Libraries
+### library references
 
 - [TinyGPSPlus](http://arduiniana.org/libraries/tinygpsplus/)
-- [Adafruit Sensor](https://github.com/adafruit/Adafruit_Sensor)
+- [avr watchdog](http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html)
 
-### Links
+### project structure
+
+- [platformio](http://platformio.org) standard project organization. It is the build and deploy tool
+
+### others
 
 - [arduino reference](https://www.arduino.cc/en/Reference/HomePage)
 - [sparkfun gps basics](https://learn.sparkfun.com/tutorials/gps-basics)

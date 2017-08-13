@@ -1,12 +1,10 @@
-arduino air quality station
+Sensor Platform
 =================================
 
 [![Build Status](https://travis-ci.org/pedroscaff/sensor-platform.svg?branch=master)](https://travis-ci.org/pedroscaff/sensor-platform)
 
-### library references
+Sensor Platform is an Arduino based tool to acquire, geolocate and save pollutants
+concentrations in a sd card. The current version is focused on CO2.
 
-[avr watchdog](http://www.nongnu.org/avr-libc/user-manual/group__avr__watchdog.html)
-
-### project structure
-
-[platformio](http://platformio.org) standard project organization. It is the build and deploy tool
+It was developed as part of my [bachelor thesis](https://bitbucket.org/pedroscaff/thesis-research/downloads/).
+There is another repository ([sensor-platform-data-analysis](https://github.com/pedroscaff/sensor-platform-data-analysis)) with tools to process and visualize the data on a map.
